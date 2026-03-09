@@ -1,40 +1,92 @@
-# Email-finder
-A simple async repo that finds public business emails from company websites using Olostep.
+# Email Finder for Company Websites (with Olostep)
 
-## What it does
+A lightweight **email finder for company websites** built with **Python and the Olostep API**.
 
-For each company website:
+This project takes a CSV of company domains, finds likely contact-related pages, extracts publicly available business emails, and exports structured results.
 
-1. Normalizes the website
-2. Builds a fallback list of likely contact pages
-3. Uses Olostep Maps to discover more URLs
-4. Filters likely contact/about/support/legal/team pages
-5. Uses Olostep Batch with `@olostep/extract-emails`
-6. Retrieves JSON output for each processed page
-7. Aggregates and deduplicates emails per company
-8. Writes CSV and JSON outputs
+It is built for **B2B lead generation, sales prospecting, outreach prep, and market research**.
 
-## Install
+## Core project flow
+
+The workflow is simple:
+
+1. load company websites from a CSV
+2. discover likely contact-related pages
+3. process selected pages with **Olostep Batch**
+4. extract public email addresses from structured results
+5. deduplicate and aggregate emails per company
+6. export company-level and page-level outputs
+
+This makes the repo useful as a **Python email finder**, **website email scraper**, and **company email extraction workflow**.
+
+## Project structure
+
+The project is organized around a small async pipeline:
+
+- `main.py` — main entrypoint
+- `config/settings.py` — runtime settings
+- `src/app.py` — CLI flow
+- `src/email_finder.py` — core pipeline
+- `src/maps_client.py` — Olostep Maps client
+- `src/batch_scraper.py` — Olostep Batch client
+- `src/models.py` — data models
+- `utils/email_tools.py` — email extraction helpers
+- `utils/url_tools.py` — URL normalization and page selection
+- `utils/io.py` — input/output helpers
+- `utils/logger.py` — logging setup
+
+## Requirements and setup
+
+Create a virtual environment and install dependencies:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 ```
 
-## Input CSV
+Create a `.env` file:
 
-Must contain one of:
+```bash
+OLOSTEP_API_KEY=your_olostep_api_key_here
+```
 
-- `website`
-- `url`
-- `domain`
+Most runtime values such as batch size, page limits, and timeouts are configured in:
 
-Optional company column:
+```bash
+config/settings.py
+```
 
-- `company`
-- `name`
+## Running the workflow
+
+Run with default settings:
+
+```bash
+python main.py
+```
+
+Run with a custom input file and output directory:
+
+```bash
+python main.py --input companies.csv --output-dir output
+```
+
+## Input format
+
+The input is a CSV containing company websites.
+
+Required column:
+
+* `website`
+  or
+* `url`
+  or
+* `domain`
+
+Optional company name columns:
+
+* `company`
+* `name`
 
 Example:
 
@@ -45,36 +97,67 @@ Brex,brex.com
 Notion,notion.so
 ```
 
+## Output files
+
+The workflow writes:
+
+* `output/company_results.csv`
+* `output/company_results.json`
+* `output/page_results.csv`
+* `output/page_results.json`
+* `output/errors.json`
+
+These outputs make it easy to review results, debug failures, and move discovered emails into spreadsheets, CRMs, or enrichment workflows.
+
+## How it works
+
+For each company website, the pipeline:
+
+* normalizes the domain
+* builds a small set of likely contact-related URLs
+* uses **Olostep Maps** to discover additional pages
+* selects the best candidate pages
+* processes those pages with **Olostep Batch**
+* retrieves structured results from `@olostep/extract-emails`
+* extracts and deduplicates email addresses
+* aggregates final results per company
+
+This keeps the workflow focused on pages like **contact, support, about, team, and legal pages**, where public business emails are most likely to appear.
+
 ## Configuration
 
-`.env` only needs:
+Key runtime behavior is controlled in `config/settings.py`, including:
 
-```bash
-OLOSTEP_API_KEY=your_olostep_api_key_here
-```
+* map depth
+* max pages per site
+* max batch items
+* concurrency
+* poll interval
+* poll timeout
 
-All other runtime values (timeouts, batch size, map depth, etc.) are in:
+This makes it easy to tune the workflow for small prospect lists or bulk email discovery.
 
-- `config/settings.py`
+## Use cases
 
-## Run
+This project is useful for:
 
-Default usage:
+* **B2B lead generation**
+* **sales prospecting**
+* **company website email extraction**
+* **outreach list building**
+* **market research**
+* **public business contact discovery**
 
-```bash
-python main.py
-```
+## Tech stack
 
-Optional input/output overrides:
+* **Python**
+* **Olostep Maps**
+* **Olostep Batch**
+* **@olostep/extract-emails**
+* **CSV / JSON outputs**
 
-```bash
-python main.py --input companies.csv --output-dir output
-```
+## Why this repo
 
-## Output
+This repo does one job well: **find public business emails from company websites in a simple, structured, and scalable way**.
 
-- `output/company_results.csv`
-- `output/company_results.json`
-- `output/page_results.csv`
-- `output/page_results.json`
-- `output/errors.json`
+Instead of scraping an entire site, it focuses on the pages most likely to contain contact information, making it practical for real outreach and research workflows.
