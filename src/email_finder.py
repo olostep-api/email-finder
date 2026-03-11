@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from config.settings import Settings
 from src.batch_scraper import BatchScraper
@@ -22,8 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 class LeadEmailFinder:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        progress_callback: Optional[Callable[[str], None]] = None,
+    ) -> None:
         self.settings = settings
+        self._progress_callback = progress_callback
 
     async def run(
         self, targets: List[TargetWebsite]
@@ -48,8 +53,14 @@ class LeadEmailFinder:
             base_url=self.settings.api_base_url,
             timeout=self.settings.request_timeout_seconds,
         ) as batch_scraper:
+            self._emit_progress("Stage: mapping candidate pages.")
             candidate_map = await self._collect_candidate_pages(targets, maps_client)
+            self._emit_progress("Stage: batching candidate pages.")
             batch_items, custom_id_to_meta = self._build_batch_items(targets, candidate_map)
+            self._emit_progress(
+                f"Prepared {len(batch_items)} page URLs for batch processing."
+            )
+            self._emit_progress("Stage: retrieving parsed batch results.")
             page_results, errors = await self._run_batches(
                 batch_scraper=batch_scraper,
                 batch_items=batch_items,
@@ -57,7 +68,9 @@ class LeadEmailFinder:
                 company_state=company_state,
             )
 
+        self._emit_progress("Stage: aggregating company-level results.")
         company_results = self._build_company_results(targets, company_state)
+        self._emit_progress("Pipeline completed.")
         return company_results, page_results, errors
 
     async def _collect_candidate_pages(
@@ -107,6 +120,9 @@ class LeadEmailFinder:
                     len(pages),
                     target.website,
                 )
+                self._emit_progress(
+                    f"Mapped {target.website}: {len(pages)} candidate pages."
+                )
 
         await asyncio.gather(*(worker(target) for target in targets))
         return output
@@ -142,14 +158,17 @@ class LeadEmailFinder:
         page_results: List[PageEmailHit] = []
         errors: List[Dict[str, str]] = []
 
-        for chunk_index, chunk in enumerate(
-            self._chunked(batch_items, self.settings.max_batch_items),
-            start=1,
-        ):
+        chunks = self._chunked(batch_items, self.settings.max_batch_items)
+        total_chunks = len(chunks)
+
+        for chunk_index, chunk in enumerate(chunks, start=1):
             logger.info(
                 "Starting batch %s with %s page URLs",
                 chunk_index,
                 len(chunk),
+            )
+            self._emit_progress(
+                f"Batching chunk {chunk_index}/{total_chunks} with {len(chunk)} page URLs."
             )
 
             try:
@@ -158,8 +177,14 @@ class LeadEmailFinder:
                     parser_id=self.settings.parser_id,
                 )
                 batch_id = str(batch["id"])
+                self._emit_progress(
+                    f"Created batch {batch_id} for chunk {chunk_index}/{total_chunks}."
+                )
             except Exception as exc:
                 logger.error("Batch creation failed for chunk %s: %s", chunk_index, exc)
+                self._emit_progress(
+                    f"Batch creation failed for chunk {chunk_index}/{total_chunks}: {exc}"
+                )
                 for item in chunk:
                     meta = custom_id_to_meta[item["custom_id"]]
                     self._record_page_result(
@@ -176,9 +201,11 @@ class LeadEmailFinder:
                 continue
 
             try:
+                self._emit_progress(f"Waiting for batch {batch_id} to complete.")
                 await self._wait_until_complete(batch_scraper, batch_id)
             except Exception as exc:
                 logger.error("Batch polling failed for %s: %s", batch_id, exc)
+                self._emit_progress(f"Batch polling failed for {batch_id}: {exc}")
                 for item in chunk:
                     meta = custom_id_to_meta[item["custom_id"]]
                     self._record_page_result(
@@ -194,6 +221,7 @@ class LeadEmailFinder:
                     )
                 continue
 
+            self._emit_progress(f"Retrieving completed items for batch {batch_id}.")
             async for item in batch_scraper.iter_batch_items(
                 batch_id,
                 status="completed",
@@ -275,6 +303,10 @@ class LeadEmailFinder:
                 )
 
         return page_results, errors
+
+    def _emit_progress(self, message: str) -> None:
+        if self._progress_callback is not None:
+            self._progress_callback(message)
 
     async def _wait_until_complete(
         self,

@@ -6,6 +6,8 @@ This project takes a CSV of company domains, finds likely contact-related pages,
 
 It is built for **B2B lead generation, sales prospecting, outreach prep, and market research**.
 
+![Olostep Email Finder UI](ui.png)
+
 ## Core project flow
 
 The workflow is simple:
@@ -24,9 +26,12 @@ This makes the repo useful as a **Python email finder**, **website email scraper
 The project is organized around a small async pipeline:
 
 - `main.py` — main entrypoint
+- `app.py` — frontend entrypoint
 - `config/settings.py` — runtime settings
 - `src/app.py` — CLI flow
 - `src/email_finder.py` — core pipeline
+- `src/service.py` — reusable app/service run wrapper
+- `src/frontend.py` — Olostep-branded frontend UI
 - `src/maps_client.py` — Olostep Maps client
 - `src/batch_scraper.py` — Olostep Batch client
 - `src/models.py` — data models
@@ -70,6 +75,27 @@ Run with a custom input file and output directory:
 ```bash
 python main.py --input companies.csv --output-dir output
 ```
+
+### Run the Gradio frontend
+
+Launch the local Gradio app:
+
+```bash
+python app.py
+```
+
+Optional host/port:
+
+```bash
+python app.py --host 0.0.0.0 --port 7860
+```
+
+The UI supports:
+
+* CSV upload (`website` / `url` / `domain`)
+* live run progress and stage logs
+* company/page/error result tables
+* one-click download of output CSV/JSON files
 
 ## Input format
 
@@ -151,6 +177,7 @@ This project is useful for:
 ## Tech stack
 
 * **Python**
+* **Gradio**
 * **Olostep Maps**
 * **Olostep Batch**
 * **@olostep/extract-emails**
