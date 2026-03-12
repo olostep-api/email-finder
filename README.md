@@ -1,6 +1,6 @@
 # Olostep Email Finder
 
-A lightweight Python workflow to find **public business emails** from company websites using the **Olostep API**.
+A lightweight Python workflow to find **public business emails** from company websites using the Olostep API.
 
 This project is useful for:
 - B2B lead generation
@@ -26,6 +26,8 @@ Create `.env` in the project root:
 OLOSTEP_API_KEY=your_olostep_api_key_here
 ```
 
+Create an API key from the [Olostep API Keys dashboard](https://www.olostep.com/dashboard/api-keys), then place it in `.env`.
+
 Run the frontend:
 
 ```bash
@@ -41,12 +43,12 @@ python main.py --input companies.csv --output-dir output
 ## What It Does
 
 For each target website, the workflow:
-1. normalizes the website URL/domain
-2. builds likely contact-related URLs
-3. discovers additional pages via Olostep Maps
-4. submits selected pages to Olostep Batch
-5. extracts emails from structured parser output
-6. deduplicates and aggregates results per company
+1. Normalizes the website URL/domain.
+2. Builds likely contact-related URLs.
+3. Discovers additional pages via [Olostep Maps](https://docs.olostep.com/features/maps/maps).
+4. Submits selected pages to [Olostep Batch](https://docs.olostep.com/features/batches/batches).
+5. Extracts emails from structured parser output.
+6. Deduplicates and aggregates results per company.
 
 ## Run Modes
 
@@ -72,10 +74,10 @@ gradio app.py
 
 UI includes:
 - CSV upload
-- run controls + expandable run details
-- progress logs
-- company/page/error result views
-- downloadable output files
+- Run controls + expandable run details
+- Progress logs
+- Company/page/error result views
+- Downloadable output files
 
 ### CLI
 
@@ -131,19 +133,28 @@ Runtime defaults live in `config/settings.py`, including:
 
 ## Project Structure
 
-- `main.py` - CLI entrypoint
-- `app.py` - frontend entrypoint
-- `src/app.py` - CLI orchestration
-- `src/frontend.py` - Gradio UI
-- `src/service.py` - reusable service wrapper for UI runs
-- `src/email_finder.py` - core async pipeline
-- `src/maps_client.py` - Olostep Maps client
-- `src/batch_scraper.py` - Olostep Batch client
-- `src/models.py` - data models
-- `utils/io.py` - CSV/JSON I/O helpers
-- `utils/url_tools.py` - URL normalization and page selection
-- `utils/email_tools.py` - email extraction helpers
-- `config/settings.py` - settings/env config
+```text
+.
+├── app.py                   # Frontend entrypoint
+├── main.py                  # CLI entrypoint
+├── companies.csv            # Example input CSV
+├── config/
+│   └── settings.py          # Settings/env config
+├── input/                   # Input files
+├── output/                  # Generated outputs
+├── src/
+│   ├── app.py               # CLI orchestration
+│   ├── frontend.py          # Gradio UI
+│   ├── service.py           # Reusable service wrapper for UI runs
+│   ├── email_finder.py      # Core async pipeline
+│   ├── maps_client.py       # Olostep Maps client
+│   ├── batch_scraper.py     # Olostep Batch client
+│   └── models.py            # Data models
+└── utils/
+    ├── io.py                # CSV/JSON I/O helpers
+    ├── url_tools.py         # URL normalization and page selection
+    └── email_tools.py       # Email extraction helpers
+```
 
 ## Tech Stack
 
